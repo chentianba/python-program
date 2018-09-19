@@ -1,0 +1,62 @@
+# -*- coding:UTF-8 -*-
+from bs4 import BeautifulSoup
+import requests
+import sys
+import re
+
+
+class DownLoader(object):
+    """
+    server: destination site of a novel
+    names: names of all chapters in a novel
+    urls: site or link corresponding to every chapter
+    nums: number of chapters
+    """
+    def __init__(self):
+        self.server = "https://www.qu.la/"
+        self.target = "https://www.qu.la/book/903/"
+        self.names = []
+        self.urls = []
+        self.nums = 0
+
+    def get_download_url(self):
+        req = requests.get(url=self.target)
+        div_bf = BeautifulSoup(req.text, features="html.parser")
+        """ 
+        It's used through "id" just because of the specified website we use.
+        """
+        div = div_bf.find_all("div", id="list")
+        a_bf = BeautifulSoup(str(div[0]), features="html.parser")
+        a = a_bf.find_all("a")
+        self.nums = len(a[19:])
+        for each in a[19:]:
+            self.names.append(each.string)
+            self.urls.append(self.server+each.get('href'))
+
+    @staticmethod
+    def get_contents(target):
+        req = requests.get(url=target)
+        bf = BeautifulSoup(req.text, features="html.parser")
+        texts = bf.find_all('div', id='content')
+        texts = re.sub(r'(\u3000)+', '\n', texts[0].text)
+        # texts = texts[0].text.replace('\u3000'*2, '\u3000'*2 + '\n')
+        return texts
+
+    @staticmethod
+    def writer(name, path, text):
+        with open(path, 'a', encoding='utf-8') as f:
+            f.write(name+'\n')
+            f.writelines(text)
+            f.write('\n\n')
+
+
+if __name__ == '__main__':
+    dl = DownLoader()
+    dl.get_download_url()
+    print("《儒道至圣》开始下载：")
+    for i in range(dl.nums):
+        dl.writer(dl.names[i], "儒道至圣.txt", dl.get_contents(dl.urls[i]))
+        # print((" 已下载：%.3f%%" % float(i/dl.nums) + '\r'))
+        sys.stdout.write(" 已下载：%.3f%%" % float(i/dl.nums) + '\r')
+        sys.stdout.flush()
+    print("《儒道至圣》下载完成")
